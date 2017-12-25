@@ -22,24 +22,53 @@ def get_trajectory(*pdbs):
     ```
     Example `ATOM` entry:
     ```
-ATOM   1899  HD23LEU A 121      40.604  62.341   8.996        0.10000
+                          23 26    32                      56
+                           v v      v                      v
+    ATOM   1899  HD23LEU A 121      40.604  62.341   8.996        0.10000
     ```
     """
     atom_re = re.compile(r"^ATOM.+$", re.M)
+    float_re = re.compile(r"[-]?\d+[.]?\d*")
+    total_coords = {}
     for path in pdbs:
         """
         print(path)
         """
         with open(path, 'r') as pdb_frame:
-            print(path)
             content = pdb_frame.read()
-            atoms = atom_re.findall(content)
-            for entry in atoms:
-                print(int(entry[23:26]))
+        atoms = atom_re.findall(content)
+        frame_coord = {}
+        for entry in atoms:
+            residue = int(entry[23:26])
+            if not (residue in frame_coord.keys()):
+                frame_coord[residue] = list()
+            frame_coord[residue].append(list(map(float, float_re.findall(entry[32:56]))))
+            
+        for key in frame_coord.keys():
+            if not (key in total_coords.keys()):
+                total_coords[key] = list()
+            res_array = np.array(frame_coord[key])
+            total_coords[key].append(res_array)
+                          
+    return total_coords
 
 def main():
-    print(__doc__)
-    get_trajectory(*sys.argv[1:])
+    #print(__doc__)
+    trajectory = get_trajectory(*sys.argv[1:])
+    rmsds = {}
+    for key in trajectory.keys():
+        rmsds[key] = list()
+        for i in range(len(trajectory[key])):
+            rmsds[key].append(rmsd.kabsch_rmsd(trajectory[key][0], trajectory[key][i]))
+    
+    print('"","' + '","'.join(list(map(str, rmsds.keys()))) + '"')
+
+    for i in range(len(sys.argv[1:])):
+        row = [str(i + 1)]
+        for key in rmsds.keys():
+            row.append(str(rmsds[key][i]))
+        print(','.join(row))
+            
 
     
 
