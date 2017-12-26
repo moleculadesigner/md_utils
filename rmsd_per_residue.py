@@ -3,6 +3,7 @@ This module allows to calculate residue fluctations in molecular dynamics trajec
 """
 import re
 import sys
+from operator import itemgetter
 #from collections import namedtuple
 
 import rmsd # pip install rmsd
@@ -61,14 +62,20 @@ def main():
         for i in range(len(trajectory[key])):
             rmsds[key].append(rmsd.kabsch_rmsd(trajectory[key][0], trajectory[key][i]))
     
-    print('"","' + '","'.join(list(map(str, rmsds.keys()))) + '"')
+    # avreages
+    avrgs = {key : np.average(rmsds[key]) for key in rmsds.keys()}
+
+    sorted_keys = list(map(itemgetter(0) ,sorted([item for item in avrgs.items()], reverse=True, key=itemgetter(1))))
+    print('"","' + '","'.join(list(map(str, sorted_keys))) + '"')
+    print('"average",{}'.format(','.join(list(map(str, [avrgs[key] for key in sorted_keys])))))
 
     for i in range(len(sys.argv[1:])):
         row = [str(i + 1)]
-        for key in rmsds.keys():
+        for key in sorted_keys:
             row.append(str(rmsds[key][i]))
         print(','.join(row))
-            
+    """    
+    """
 
     
 
